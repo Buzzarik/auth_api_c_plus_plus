@@ -38,6 +38,7 @@ namespace drogon_model
 {
 namespace postgres
 {
+class Tokens;
 
 class Users
 {
@@ -150,6 +151,10 @@ class Users
     Json::Value toJson() const;
     Json::Value toMasqueradedJson(const std::vector<std::string> &pMasqueradingVector) const;
     /// Relationship interfaces
+    std::vector<Tokens> getTokens(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getTokens(const drogon::orm::DbClientPtr &clientPtr,
+                   const std::function<void(std::vector<Tokens>)> &rcb,
+                   const drogon::orm::ExceptionCallback &ecb) const;
   private:
     friend drogon::orm::Mapper<Users>;
     friend drogon::orm::BaseBuilder<Users, true, true>;

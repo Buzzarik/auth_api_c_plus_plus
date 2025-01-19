@@ -6,6 +6,7 @@
  */
 
 #include "Users.h"
+#include "Tokens.h"
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -1057,4 +1058,40 @@ bool Users::validJsonOfField(size_t index,
             return false;
     }
     return true;
+}
+std::vector<Tokens> Users::getTokens(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from tokens where id_user = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *id_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    std::vector<Tokens> ret;
+    ret.reserve(r.size());
+    for (auto const &row : r)
+    {
+        ret.emplace_back(Tokens(row));
+    }
+    return ret;
+}
+
+void Users::getTokens(const DbClientPtr &clientPtr,
+                      const std::function<void(std::vector<Tokens>)> &rcb,
+                      const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from tokens where id_user = $1";
+    *clientPtr << sql
+               << *id_
+               >> [rcb = std::move(rcb)](const Result &r){
+                   std::vector<Tokens> ret;
+                   ret.reserve(r.size());
+                   for (auto const &row : r)
+                   {
+                       ret.emplace_back(Tokens(row));
+                   }
+                   rcb(ret);
+               }
+               >> ecb;
 }
