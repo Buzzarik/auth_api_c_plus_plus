@@ -23,6 +23,6 @@ class Register : public drogon::HttpController<Register>
     // void get(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback, int p1, std::string p2);
     // void your_method_name(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback, double p1, int p2) const;
     void verifyopt(const HttpRequestPtr &req, std::function<void (const HttpResponsePtr &)> &&callback);
-    bool check_parse_request(std::shared_ptr<Json::Value> json);
+    static bool check_parse_request(std::shared_ptr<Json::Value> json);
     static void errorResponse(const std::string& message, HttpStatusCode code, std::function<void (const HttpResponsePtr &)> &&callback);
 };

@@ -26,6 +26,6 @@ class Signup : public drogon::HttpController<Signup>
     // your declaration of processing function maybe like this:
     // void get(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback, int p1, std::string p2);
     // void your_method_name(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback, double p1, int p2) const;
-    bool check_parse_request(std::shared_ptr<Json::Value> json);
+    static bool check_parse_request(std::shared_ptr<Json::Value> json);
     static void errorResponse(const std::string& message, HttpStatusCode code, std::function<void (const HttpResponsePtr &)> &&callback);
 };
