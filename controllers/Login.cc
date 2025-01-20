@@ -36,7 +36,7 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
 
     if (in.password == "" || in.phone_number == ""){
         errorResponse("Password and phone and password number are required", k400BadRequest, std::move(callback));
-        LOG_INFO << "Password and phone number are required in signup\n";
+        LOG_INFO << "Password and phone number are required in login\n";
         return;
     }
 
@@ -51,7 +51,7 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
                 return; 
             }
             //TODO: добавить в конфиг секретное слово + ttl для токена и его использовать
-            auto token_ptr = lib::create_token(user, "secret", 5);
+            auto token_ptr = lib::create_token(user, "secret", 10);
             if (!token_ptr){
                 errorResponse("Server internal error", k500InternalServerError, AdviceCallback(callback));
                 LOG_ERROR << "Failed created token\n";
@@ -64,6 +64,7 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
             {
             auto storage = app().getDbClient();
             Mapper<Tokens> mp(storage);
+            LOG_DEBUG << "TOKEN = " << token_ptr->getValueOfHash() << "\n";
             mp.insert(*token_ptr, 
                 [callback = callback](Tokens insert_token){
                   Json::Value answer;
