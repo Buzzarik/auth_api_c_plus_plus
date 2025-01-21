@@ -2,34 +2,11 @@
 #include <iostream>
 
 namespace lib{
-    std::chrono::system_clock::time_point parseDateTime(const std::string& dateTimeString) {
-        std::istringstream ss(dateTimeString);
-        tm t{};
-
-        ss >> std::get_time(&t, "%Y.%m.%d %H:%M:%S");
-        if (ss.fail()) {
-            throw std::runtime_error("Failed to parse datetime string.");
-        }
-
-        time_t time_t_value;
-        #ifdef _WIN32
-        time_t_value = mktime(&t); // mktime для локального времени
-        #else
-        time_t_value = timegm(&t); // timegm для UTC времени
-        #endif
-
-
-        if (time_t_value == -1) {
-            throw std::runtime_error("Failed to convert tm to time_t.");
-        }
-
-        return std::chrono::system_clock::from_time_t(time_t_value);
-    }
-
     std::unique_ptr<drogon_model::postgres::Tokens> create_token(const drogon_model::postgres::Users& user, const std::string& secret, int ttl_token){
         try{
             trantor::Date d = trantor::Date::now();
 
+            //TODO: сделать в виде конфига
             d = d.after(ttl_token * 2).roundSecond(); //NOTE: поставил на 20 сек
 
             
