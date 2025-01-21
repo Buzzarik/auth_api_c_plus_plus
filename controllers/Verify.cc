@@ -5,7 +5,7 @@
 
 // Add definition of your processing function here
 bool Verify::check_parse_request(std::shared_ptr<Json::Value> json){
-    return !json || !((*json)["token"].isString() && (*json)["id_api"].isInt64());
+    return !json || !((*json)["token"].isString() && (*json)["id_api"].isInt() && (*json)["id_user"].isInt());
 }
 
 void Verify::errorResponse(const std::string& message, HttpStatusCode code, std::function<void (const HttpResponsePtr &)> &&callback){
@@ -31,12 +31,12 @@ void Verify::verify(const HttpRequestPtr& req, std::function<void (const HttpRes
 
     Verify::Input in {
         .hash_token = (*json_body_ptr)["token"].asString(),
-        .id_api = (*json_body_ptr)["id_api"].asInt64()
+        .id_api = (*json_body_ptr)["id_api"].asInt()
     };
 
     if (in.hash_token == "") {
-        errorResponse("token are required", k400BadRequest, std::move(callback));
-        LOG_INFO << "token are required\n";
+        errorResponse("Token is required", k400BadRequest, std::move(callback));
+        LOG_INFO << "Token is required\n";
         return;
     }
 
@@ -54,17 +54,13 @@ void Verify::verify(const HttpRequestPtr& req, std::function<void (const HttpRes
                     && Criteria(Tokens::Cols::_id_user, CompareOperator::EQ, id_user),
                     [callback = callback, in = in](Tokens find_token){
                         if (!lib::verify_token(in.hash_token, in.id_api, find_token)){
-                            errorResponse("The token is not exists", k400BadRequest, AdviceCallback(callback));
+                            errorResponse("Invalid token or expiry", k404NotFound, AdviceCallback(callback));
                             LOG_INFO << "The token is not exists. Hash not valid\n";
-                            LOG_DEBUG << "hash = " << in.hash_token  << " api = " << in.id_api
-                                << "\nst hash = " << find_token.getValueOfHash() << " api = " << find_token.getValueOfIdApi() << "\n";
                             return;
                         }
                         Json::Value answer;
-                        LOG_INFO << "token find by user = " << find_token.getValueOfIdUser()
-                                << "id_api = " << find_token.getValueOfIdApi() << "\n";
                         answer["success"] = true;
-                        answer["message"] = "Token find successfully";
+                        answer["message"] = "Token is valid";
                         auto resp = HttpResponse::newHttpJsonResponse(answer);
                         resp->setContentTypeCode(CT_APPLICATION_JSON);
                         resp->setStatusCode(k200OK);
@@ -79,7 +75,7 @@ void Verify::verify(const HttpRequestPtr& req, std::function<void (const HttpRes
                             LOG_DEBUG << "Failed get token from storage\n" << err.base().what() << "\n";
                             return;
                         } 
-                        errorResponse("The token is not exists", k400BadRequest, AdviceCallback(callback));
+                        errorResponse("Invalid token or expiry", k404NotFound, AdviceCallback(callback));
                         LOG_INFO << "The token is not exists. Token is not in storage\n";
                         return;
                     }
@@ -95,8 +91,8 @@ void Verify::verify(const HttpRequestPtr& req, std::function<void (const HttpRes
         return;
     }
     catch(const std::exception& e){
-        errorResponse("token is not valid", k400BadRequest, std::move(callback));
-        LOG_INFO << "token is not Valid. WRONG decode\n";
+        errorResponse("Invalid token or expiry", k404NotFound, std::move(callback));
+        LOG_INFO << "Invalid token or expiry. WRONG decode\n";
         return;
     }
 }

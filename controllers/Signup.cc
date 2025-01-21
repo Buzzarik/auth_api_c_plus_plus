@@ -42,7 +42,7 @@ void Signup::signup(const HttpRequestPtr &req, std::function<void (const HttpRes
     };
 
     if (in.name == "" || in.password == "" || in.phone_number == ""){
-        errorResponse("Name and phone and password number are required", k400BadRequest, std::move(callback));
+        errorResponse("Name, phone and password are required", k400BadRequest, std::move(callback));
         LOG_INFO << "Name and phone and password number are required in signup\n";
         return;
     }
@@ -52,8 +52,8 @@ void Signup::signup(const HttpRequestPtr &req, std::function<void (const HttpRes
     mp.findOne(orm::Criteria(Users::Cols::_phone_number, CompareOperator::EQ, in.phone_number),
         [callback = callback](Users user){
             //возвращаем ответ, что такой пользователь есть
-            errorResponse("User exists!", HttpStatusCode::k409Conflict, AdviceCallback(callback));
-            LOG_INFO << "User exists in signup\n";
+            errorResponse("User already exists", HttpStatusCode::k409Conflict, AdviceCallback(callback));
+            LOG_INFO << "User already exists in signup\n";
             return;
         },
         [callback = callback, in = in](const DrogonDbException& err){ //если количество строк больше одной или равно нулю, возникает исключение UnexpectedRows. Тоже проверить
@@ -65,13 +65,9 @@ void Signup::signup(const HttpRequestPtr &req, std::function<void (const HttpRes
                 LOG_DEBUG << "Failed get user from storage\n" << err.base().what() << "\n";
                 return;
             }
-            //TODO: захешировать пароль и сгенерировать ОТР пароль
             try {
                 std::string hash = lib::hashing(in.password); //могут вызвать исключения
                 std::string otp = lib::generate_otp();
-
-//NOTE: потом убрать
-                LOG_DEBUG << "hash: " << hash << "\n";
 
                 Json::Value out;
                 out["otp"] = otp;
@@ -84,7 +80,7 @@ void Signup::signup(const HttpRequestPtr &req, std::function<void (const HttpRes
                 //сделать запрос со временем 5 мин
                 cache->execCommandAsync([callback = callback, otp = otp](const drogon::nosql::RedisResult &r){
                         Json::Value answer;
-                        LOG_DEBUG << "otp: " << otp << "\n";
+                        LOG_DEBUG << "otp: " << otp << "\n"; //TODO: отправка например на почту
                         answer["success"] = true;
                         answer["message"] = "OTP sent successfully";
                         auto resp = HttpResponse::newHttpJsonResponse(answer);

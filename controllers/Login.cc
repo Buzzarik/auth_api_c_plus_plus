@@ -5,7 +5,7 @@
 
 // Add definition of your processing function here
 bool Login::check_parse_request(std::shared_ptr<Json::Value> json) {
-    return !json || !((*json)["phone_number"].isString() && (*json)["password"].isString() && (*json)["id_api"].isInt64());
+    return !json || !((*json)["phone_number"].isString() && (*json)["password"].isString() && (*json)["id_api"].isInt());
 }
 
 void Login::errorResponse(const std::string& message, HttpStatusCode code, std::function<void (const HttpResponsePtr &)> &&callback){
@@ -24,14 +24,14 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
     auto json_body_ptr = req->jsonObject();
     if (check_parse_request(json_body_ptr)){
         errorResponse("Invalid request payload", k400BadRequest, std::move(callback));
-        LOG_INFO << "Invalid request payload in signup\n";
+        LOG_INFO << "Invalid request payload in login\n";
         return;
     }
 
     Login::Input in {
         .password = (*json_body_ptr)["password"].asString(),
         .phone_number = (*json_body_ptr)["phone_number"].asString(),
-        .id_api = (*json_body_ptr)["id_api"].asInt64()
+        .id_api = (*json_body_ptr)["id_api"].asInt()
     };
 
     if (in.password == "" || in.phone_number == ""){
@@ -46,7 +46,7 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
         [callback = callback, in = in](Users user){
             std::string hash_password = user.getValueOfHashPassword();
             if (!lib::verify_password(hash_password, in.password)){
-                errorResponse("Wrong password or phone", k400BadRequest, AdviceCallback(callback));
+                errorResponse("Invalid phone or password", k404NotFound, AdviceCallback(callback));
                 LOG_INFO << "Wrong password\n";
                 return; 
             }
@@ -60,19 +60,16 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
             token_ptr->setIdApi(in.id_api);
             token_ptr->setIdUser(user.getValueOfId());
 
-            //TODO: залить токен в Postgres
-            {
             auto storage = app().getDbClient();
             Mapper<Tokens> mp(storage);
-            LOG_DEBUG << "TOKEN = " << token_ptr->getValueOfHash() << "\n";
             mp.insert(*token_ptr, 
                 [callback = callback](Tokens insert_token){
                   Json::Value answer;
                     LOG_INFO << "token created by user = " << insert_token.getValueOfIdUser()
                             << "id_api = " << insert_token.getValueOfIdApi() << "\n";
                     answer["success"] = true;
-                    answer["message"] = "Token created successfully";
                     answer["token"] = insert_token.getValueOfHash();
+                    answer["id_user"] = insert_token.getValueOfIdUser();
                     auto resp = HttpResponse::newHttpJsonResponse(answer);
                     resp->setContentTypeCode(CT_APPLICATION_JSON);
                     resp->setStatusCode(k200OK);
@@ -101,8 +98,8 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
                                 LOG_INFO << "token find by user = " << find_token.getValueOfIdUser()
                                         << "id_api = " << find_token.getValueOfIdApi() << "\n";
                                 answer["success"] = true;
-                                answer["message"] = "Token find successfully";
                                 answer["token"] = find_token.getValueOfHash();
+                                answer["id_user"] = find_token.getValueOfIdUser();
                                 auto resp = HttpResponse::newHttpJsonResponse(answer);
                                 resp->setContentTypeCode(CT_APPLICATION_JSON);
                                 resp->setStatusCode(k200OK);
@@ -120,7 +117,6 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
                 }
             );
             return;
-            }
         },
         [callback = callback, in = in](const DrogonDbException& err){
             const UnexpectedRows* unexpectedRows = dynamic_cast<const drogon::orm::UnexpectedRows*>(&err); //чтобы проверить, что бд нормально отработал
@@ -130,7 +126,7 @@ void Login::login(const HttpRequestPtr& req, std::function<void (const HttpRespo
                 LOG_DEBUG << "Failed get user from storage\n" << err.base().what() << "\n";
                 return;
             }
-            errorResponse("Wrong password or phone", k400BadRequest, AdviceCallback(callback));
+            errorResponse("Invalid phone or password", k404NotFound, AdviceCallback(callback));
             LOG_INFO << "Wrong phone\n";
             return; 
         }

@@ -10,7 +10,7 @@ class Login : public drogon::HttpController<Login>
     struct Input{
       std::string phone_number;
       std::string password;
-      int64_t id_api;
+      int id_api;
     };
 
     METHOD_LIST_BEGIN

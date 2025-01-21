@@ -11,11 +11,6 @@ void Register::errorResponse(const std::string& message, HttpStatusCode code, st
         callback(resp);
 }
 
-//TODO: выделить в /lib
-bool verify(const std::string& hash, const std::string& password){
-    return true;
-}
-
 // Add definition of your processing function here
 bool Register::check_parse_request(std::shared_ptr<Json::Value> json) {
     return !json || !((*json)["otp"].isString() && (*json)["phone_number"].isString());
@@ -38,8 +33,8 @@ void Register::verifyopt(const HttpRequestPtr &req, std::function<void (const Ht
     };
 
     if (in.otp == "" || in.phone_number == ""){
-        errorResponse("Name and phone and password number are required", k400BadRequest, std::move(callback));
-        LOG_INFO << "Name and phone number are required in signup\n";
+        errorResponse("OTP and password are required", k400BadRequest, std::move(callback));
+        LOG_INFO << "OTP and password are require in registry\n";
         return;
     }
 
@@ -48,7 +43,7 @@ void Register::verifyopt(const HttpRequestPtr &req, std::function<void (const Ht
             //походу сюда попадает то, что значит не найден по ключу isNill
             if (r.isNil()) {
                 LOG_INFO << "cache get failed\n";
-                errorResponse("OTP is not valid or Expiry", k400BadRequest, AdviceCallback(callback));
+                errorResponse("Invalid OTP or expiry", k404NotFound, AdviceCallback(callback));
                 return;
             }
             Json::Value user_data;
@@ -62,7 +57,7 @@ void Register::verifyopt(const HttpRequestPtr &req, std::function<void (const Ht
 
             if (user_data["otp"].asString() != in.otp){
                 LOG_INFO << "Otp is not verify\n";
-                errorResponse("Otp is not verify", k400BadRequest, AdviceCallback(callback));
+                errorResponse("Invalid OTP or expiry", k404NotFound, AdviceCallback(callback));
                 return;
             }
 
@@ -76,9 +71,7 @@ void Register::verifyopt(const HttpRequestPtr &req, std::function<void (const Ht
                     Json::Value answer;
                     LOG_INFO << "user created by id = " << insert_user.getValueOfId() << "\n";
                     answer["success"] = true;
-                    answer["message"] = "User registered successfully";
-                    answer["name"] = insert_user.getValueOfName();
-                    answer["phone_number"] = insert_user.getValueOfPhoneNumber();
+                    answer["message"] = "User is created";
                     auto resp = HttpResponse::newHttpJsonResponse(answer);
                     resp->setContentTypeCode(CT_APPLICATION_JSON);
                     resp->setStatusCode(k201Created);
@@ -90,13 +83,13 @@ void Register::verifyopt(const HttpRequestPtr &req, std::function<void (const Ht
                     //как понять, что CONSTRAINT (но я не уверен, что именно Failure это делает)
                     const Failure* constraint = dynamic_cast<const drogon::orm::Failure*>(&err);
                     if (constraint){
-                        errorResponse("User with the phone_number already exists", k400BadRequest, AdviceCallback(callback));
-                        LOG_INFO << "Failed set user from storage or user is exists\n";
+                        errorResponse("User already exists", k409Conflict, AdviceCallback(callback));
+                        LOG_INFO << "Failed set user. user is exists\n";
                         return;
                     }
                     errorResponse("Server internal error", k500InternalServerError, AdviceCallback(callback));
-                    LOG_ERROR << "Failed set user from storage or user is exists\n";
-                    LOG_DEBUG << "Failed set user from storage or user is exists\n" << err.base().what() << "\n";
+                    LOG_ERROR << "Failed set user from storage\n";
+                    LOG_DEBUG << "Failed set user from storage\n" << err.base().what() << "\n";
                     return;
                 }
             );

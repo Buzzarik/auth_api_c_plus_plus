@@ -9,7 +9,8 @@ class Verify : public drogon::HttpController<Verify>
   public:
     struct Input {
       std::string hash_token;
-      int64_t id_api;
+      int id_api;
+      int id_user;
     };
 
     METHOD_LIST_BEGIN
