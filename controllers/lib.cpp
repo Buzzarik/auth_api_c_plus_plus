@@ -7,7 +7,7 @@ namespace lib{
             trantor::Date d = trantor::Date::now();
 
             //TODO: сделать в виде конфига
-            d = d.after(ttl_token * 2).roundSecond(); //NOTE: поставил на 20 сек
+            d = d.after(ttl_token * 6).roundSecond(); //NOTE: поставил на 60 сек
 
             
             jwt::date date(std::chrono::seconds(d.secondsSinceEpoch()));

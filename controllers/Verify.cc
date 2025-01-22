@@ -5,7 +5,7 @@
 
 // Add definition of your processing function here
 bool Verify::check_parse_request(std::shared_ptr<Json::Value> json){
-    return !json || !((*json)["token"].isString() && (*json)["id_api"].isInt() && (*json)["id_user"].isInt());
+    return !json || !((*json)["token"].isString() && (*json)["id_api"].isInt());
 }
 
 void Verify::errorResponse(const std::string& message, HttpStatusCode code, std::function<void (const HttpResponsePtr &)> &&callback){
